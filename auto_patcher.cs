@@ -137,7 +137,7 @@ class Program
     /// <param name="monoCecil">The Mono.Cecil assembly.</param>
     /// <param name="bBackup">Whether to backup the file or not before patching.</param>
     /// <returns>Returns zero on success and -1 if some failure occurs.</returns>
-    public static int DoPatch(String filename, String monoCecil, bool bBackup)
+    public static int DoPatch(String filename, String dnlib, bool bBackup)
     {
         try
         {
@@ -151,22 +151,25 @@ class Program
                     String backupFile = filename + ".bak";
                     File.Copy(filename, backupFile);
                 }
+                
+                byte[] dataFile = System.IO.File.ReadAllBytes(filename);
 
-                //load the Mono.Cecil assembly.
-                Assembly assembly = Assembly.LoadFrom(monoCecil);
+                //load the dnlib assembly.
+                Assembly assembly = Assembly.LoadFrom(dnlib);
 
-                //Grab the Mono.Cecil.Module.Definition type.
-                Type moduleDefinitionType = assembly.GetType("Mono.Cecil.ModuleDefinition");
+                //Grab the dnlib.DotNet.ModuleDefMD type.
+                Type moduleDefinitionType = assembly.GetType("dnlib.DotNet.ModuleDefMD");
 
-                //Get the Mono.Cecil.ModuleDefinition.ReadModule(String) method.
-                Type[] argumentTypes = { typeof(String) };
-                MethodInfo methodInfo = moduleDefinitionType.GetMethod("ReadModule", argumentTypes);
+                //Get the dnlib.DotNet.ModuleDefMD.Load(byte[]) method.
+                Type[] argumentTypes = { typeof(byte[]) };
+                MethodInfo methodInfo = moduleDefinitionType.GetMethod("Load", argumentTypes);
 
-                //Call the Mono.Cecil.ModuleDefinition.ReadModule(String) method. Note: it is static, first argument is null as a result.
-                Object[] arguments = { filename };
+                //Call the dnlib.DotNet.ModuleDefMD.Load(byte[]) method. Note: it is static, first argument is null as a result.
+                Object[] arguments = { dataFile };
                 dynamic module = methodInfo.Invoke(null, arguments);
 
                 //Loop through each class.
+                dynamic classAttributeType = assembly.GetType("dnlib.DotNet.TypeAttributes");
                 foreach (dynamic type in module.GetTypes())
                 {
                     //Make each class public.
@@ -178,38 +181,44 @@ class Program
                             //check whether class is nested then assign the appopriate public.
                             if (type.IsNested == true)
                             {
-                                type.IsNestedPublic = true;   
+                                type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPublic"), classAttributeType);
+                                //type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPrivate"), classAttributeType);
                             }
                             else
                             {
-                                type.IsPublic = true;
+                                type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "Public"), classAttributeType);
+                                type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NotPublic"), classAttributeType);
                             }
                             
                             //unseal the class.
                             if(type.IsAbstract == false)
                             {
-                                type.IsSealed = false;
+                                type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "Sealed"), classAttributeType);
                             }
                         }
                         
                         //Loop through each field.
+                        dynamic fieldAttributeType = assembly.GetType("dnlib.DotNet.FieldAttributes");
                         foreach (dynamic field in type.Fields)
                         {
-                            //Make each field public.
-                            field.IsPublic = true;
+                            //Make each field public. 
+                            field.Attributes |= Convert.ChangeType(Enum.Parse(fieldAttributeType, "Public"), fieldAttributeType);
+                            field.Attributes &= ~Convert.ChangeType(Enum.Parse(fieldAttributeType, "Private"), fieldAttributeType);
                         }
 
                         //Loop through each method.
+                        dynamic methodAttributeType = assembly.GetType("dnlib.DotNet.MethodAttributes");
                         foreach (dynamic method in type.Methods)
                         {
                             //Make each method public.
-                            method.IsPublic = true;
+                            method.Attributes |= Convert.ChangeType(Enum.Parse(methodAttributeType, "Public"), methodAttributeType);
+                            method.Attributes &= ~Convert.ChangeType(Enum.Parse(methodAttributeType, "Private"), methodAttributeType);
                             
                             //Make each method virtual if it isn't static/constructor/abstract
                             if(method.IsStatic == false  && method.IsAbstract == false && method.IsConstructor == false)
                             {
-                              //make each method virtual.
-                              method.IsVirtual = true;
+                                //make each method virtual.
+                                method.Attributes |= Convert.ChangeType(Enum.Parse(methodAttributeType, "Virtual"), methodAttributeType);
                             }
                         }
                     }
@@ -217,6 +226,7 @@ class Program
 
                 //Write out the module.
                 module.Write(filename);
+                
                 return 0;
             }
         }
@@ -232,6 +242,8 @@ class Program
 
     static int Main(string[] args)
     {
+        string origFile = "de4dot.exe";
+        string modFile = "de4dotp.exe";
         //return value
         int returnValue;
 
@@ -239,10 +251,10 @@ class Program
         PrintSeparater();
 
         //Merge de4dot with all of the assemblies it depends on into an assembly called de4dotp.exe.
-        Console.WriteLine("Merging 'de4dot.exe' and DLLs into a portable executable 'de4dotp.exe'...\r\n");
-        String filename = GetProgramFilesx86() + "\\Microsoft\\ILMerge\\ILMerge.exe";
-        String arguments = "de4dot.exe bin\\AssemblyData.dll bin\\AssemblyServer.exe bin\\blocks.dll bin\\de4dot.code.dll bin\\de4dot.cui.dll bin\\de4dot.mdecrypt.dll bin\\Mono.Cecil.dll /out:de4dotp.exe";
-        returnValue = RunProgram(filename, arguments);
+        Console.WriteLine("Merging '"+ origFile +"' and DLLs into a packed executable '"+ modFile +"'...\r\n");
+        String ilmergeProgram = GetProgramFilesx86() + "\\Microsoft\\ILMerge\\ILMerge.exe";
+        String arguments = origFile + " bin\\AssemblyData.dll bin\\AssemblyServer.exe bin\\de4dot.blocks.dll bin\\de4dot.code.dll bin\\de4dot.cui.dll bin\\de4dot.mdecrypt.dll bin\\dnlib.dll /out:" + modFile;
+        returnValue = RunProgram(ilmergeProgram, arguments);
 
         if (returnValue == 0)
         {
@@ -253,9 +265,8 @@ class Program
             PrintSeparater();
 
             //Patch de4dotp.exe to allow public access to all classes, fields, and methods and virtualizing methods.
-            Console.WriteLine("Patching 'de4dotp.exe', (1) Publicizing classes/fields/methods, (2) unsealing classes, (3) virtualizing methods...\r\n");
-            filename = "de4dotp.exe";
-            returnValue = DoPatch(filename, "bin\\Mono.Cecil.dll", false);
+            Console.WriteLine("Patching '"+ modFile +"', (1) Publicizing classes/fields/methods, (2) unsealing classes, (3) virtualizing methods...\r\n");
+            returnValue = DoPatch(modFile, "bin\\dnlib.dll", false);
         }
 
         //print error message
