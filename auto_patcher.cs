@@ -146,7 +146,7 @@ class Program
     /// Patches the classes and methods of the specified .net assembly using the Mono.Cecil assembly provided.
     /// </summary>
     /// <param name="filename">The assembly to patch.</param>
-    /// <param name="monoCecil">The Mono.Cecil assembly.</param>
+    /// <param name="dnlib">The dnlib assembly.</param>
     /// <param name="bBackup">Whether to backup the file or not before patching.</param>
     /// <returns>Returns zero on success and -1 if some failure occurs.</returns>
     public static int DoPatch(String filename, String dnlib, bool bBackup)
