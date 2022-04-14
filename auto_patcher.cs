@@ -143,7 +143,7 @@ class Program
     }
 
     /// <summary>
-    /// Patches the classes and methods of the specified .net assembly using the Mono.Cecil assembly provided.
+    /// Patches the classes and methods of the specified .net assembly using the dnlib assembly provided.
     /// </summary>
     /// <param name="filename">The assembly to patch.</param>
     /// <param name="dnlib">The dnlib assembly.</param>
