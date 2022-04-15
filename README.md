@@ -7,7 +7,7 @@ Patcher for d4dot that merges all assemblies into the base executable, publicize
 - `de4dot`
 
 # Setup
-- Download a compiled version of [de4dot](https://github.com/mobile46/de4dot). You should be able to get a copy from the build bot as an [artifact](https://github.com/mobile46/de4dot/actions).
+- Download a compiled version of [de4dot](https://github.com/mobile46/de4dot). You should be able to get a copy from the build bot [here](https://github.com/mobile46/de4dot/actions) as an artifact.
 - Install [Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) and add `csc.exe` directory to your path.
 - Install [ILRepack](https://github.com/gluck/il-repack) and add the `ILRepack.exe` directory to your path. I just extract the executable from the [nupkg](http://nuget.org/api/v2/package/ILRepack) directly.
 
