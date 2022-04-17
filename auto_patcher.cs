@@ -148,34 +148,28 @@ class Program
                 foreach (dynamic type in module.GetTypes())
                 {
                     //Make each class public.
-                    if (type.IsClass == true)
-                    {
+                    if (type.IsClass == true) {
                         //Check if the class is a delegate. If it is, then don't change its attributes.
-                        if (IsDelegate(type) == false)
-                        {
-                            //check whether class is nested then assign the appopriate public.
-                            if (type.IsNested == true)
-                            {
+                        if (IsDelegate(type) == false) {
+                            //check whether class is nested then assign the appropriate public.
+                            if (type.IsNested == true) {
                                 type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPublic"), classAttributeType);
                                 //type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPrivate"), classAttributeType);
                             }
-                            else
-                            {
+                            else {
                                 type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "Public"), classAttributeType);
                                 type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NotPublic"), classAttributeType);
                             }
 
                             //unseal the class.
-                            if(type.IsAbstract == false)
-                            {
+                            if(type.IsAbstract == false) {
                                 type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "Sealed"), classAttributeType);
                             }
                         }
 
                         //Loop through each field.
                         dynamic fieldAttributeType = assembly.GetType("dnlib.DotNet.FieldAttributes");
-                        foreach (dynamic field in type.Fields)
-                        {
+                        foreach (dynamic field in type.Fields) {
                             //Make each field public.
                             field.Attributes |= Convert.ChangeType(Enum.Parse(fieldAttributeType, "Public"), fieldAttributeType);
                             field.Attributes &= ~Convert.ChangeType(Enum.Parse(fieldAttributeType, "Private"), fieldAttributeType);
@@ -183,15 +177,13 @@ class Program
 
                         //Loop through each method.
                         dynamic methodAttributeType = assembly.GetType("dnlib.DotNet.MethodAttributes");
-                        foreach (dynamic method in type.Methods)
-                        {
+                        foreach (dynamic method in type.Methods) {
                             //Make each method public.
                             method.Attributes |= Convert.ChangeType(Enum.Parse(methodAttributeType, "Public"), methodAttributeType);
                             method.Attributes &= ~Convert.ChangeType(Enum.Parse(methodAttributeType, "Private"), methodAttributeType);
 
                             //Make each method virtual if it isn't static/constructor/abstract
-                            if(method.IsStatic == false  && method.IsAbstract == false && method.IsConstructor == false)
-                            {
+                            if(method.IsStatic == false  && method.IsAbstract == false && method.IsConstructor == false) {
                                 //make each method virtual.
                                 method.Attributes |= Convert.ChangeType(Enum.Parse(methodAttributeType, "Virtual"), methodAttributeType);
                             }
@@ -230,8 +222,7 @@ class Program
         String arguments = ".\\"+origFile + " AssemblyData.dll AssemblyServer.exe de4dot.blocks.dll de4dot.code.dll de4dot.cui.dll de4dot.mdecrypt.dll dnlib.dll /out:" + modFile;
         returnValue = RunProgram(ilmergeProgram, arguments);
 
-        if (returnValue == 0)
-        {
+        if (returnValue == 0) {
             //clear the error buffer since it adds any output messages.
             errorBuffer.Clear();
             PrintSeparater(); //separater
@@ -242,8 +233,7 @@ class Program
         }
 
         //print error message
-        if (returnValue != 0)
-        {
+        if (returnValue != 0) {
             Console.WriteLine("An error occurred:");
             Console.WriteLine(errorBuffer);
         }
