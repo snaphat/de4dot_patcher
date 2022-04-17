@@ -142,7 +142,7 @@ class Program
                         if (type.IsNested == true) {
                             // Nested class: mark as NestedPublic.
                             type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPublic"), classAttributeType);
-                            //type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPrivate"), classAttributeType);
+                            //type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPrivate"), classAttributeType); // Crashes de4dot.
                         }
                         else {
                             // Top level class: mark as Public.
