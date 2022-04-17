@@ -237,6 +237,7 @@ class Program
 
         //remove a generated pdb from ilmerge if it exists.
         File.Delete("de4dotp.pdb");
+        File.Delete("de4dotp.exe.config");
 
         Console.WriteLine("Press Enter to exit...");
         Console.ReadLine();
