@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
+[assembly:AssemblyVersionAttribute("0.0.2")]
+
 class Program
 {
     static StringBuilder outBuffer = new StringBuilder();
