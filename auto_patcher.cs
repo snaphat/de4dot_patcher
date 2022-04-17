@@ -31,9 +31,7 @@ class Program
     {
         if (8 == IntPtr.Size
             || (!String.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432"))))
-        {
             return Environment.GetEnvironmentVariable("ProgramFiles(x86)");
-        }
         return Environment.GetEnvironmentVariable("ProgramFiles");
     }
 
@@ -45,16 +43,11 @@ class Program
     static bool CheckFileExists(String filename)
     {
         //check if the file exists.
-        if (File.Exists(filename) == false)
-        {
-
+        if (File.Exists(filename) == false) {
             var values = Environment.GetEnvironmentVariable("PATH");
             foreach (var path in values.Split(Path.PathSeparator))
-            {
-                var fullPath = Path.Combine(path, filename);
-                if (File.Exists(fullPath))
+                if (File.Exists(Path.Combine(path, filename)))
                     return true; //success (in path)
-            }
 
             //write error.
             errorBuffer.Append("Program '" + filename + "' does not exist.");
@@ -137,11 +130,9 @@ class Program
         try
         {
             //check if file exists.
-            if (CheckFileExists(filename) == true)
-            {
+            if (CheckFileExists(filename) == true) {
                 //check whether to backup file
-                if (bBackup == true)
-                {
+                if (bBackup == true) {
                     //Moving file
                     String backupFile = filename + ".bak";
                     File.Copy(filename, backupFile);
