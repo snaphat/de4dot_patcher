@@ -24,24 +24,21 @@ class Program
     }
 
     /// <summary>
-    /// Checks if a file exists.
+    /// Checks if a file is in the path.
     /// </summary>
     /// <param name="filename">The file to check existence for.</param>
     /// <returns>Return true if the file is found or false otherwise.</returns>
-    static bool CheckFileExists(String filename)
+    static bool CheckFileInPath(String filename)
     {
         //check if the file exists.
-        if (File.Exists(filename) == false) {
-            var values = Environment.GetEnvironmentVariable("PATH");
-            foreach (var path in values.Split(Path.PathSeparator))
-                if (File.Exists(Path.Combine(path, filename)))
-                    return true; //success (in path)
+        var values = Environment.GetEnvironmentVariable("PATH");
+        foreach (var path in values.Split(Path.PathSeparator))
+            if (File.Exists(Path.Combine(path, filename)))
+                return true; //success (in path)
 
-            //write error.
-            outBuffer.Append("Program '" + filename + "' does not exist.");
-            return false;
-        }
-        return true; //success
+        //write error.
+        outBuffer.Append("Program '" + filename + "' does not exist.");
+        return false;
     }
 
     /// <summary>
@@ -55,7 +52,7 @@ class Program
         try
         {
             //check if file exists.
-            if (CheckFileExists(filename) == true) {
+            if (CheckFileInPath(filename) == true) {
                 //print out what we are doing.
                 outBuffer.Append("Running program '" + filename + " " + arguments + "'...\r\n");
 
@@ -116,80 +113,77 @@ class Program
     {
         try
         {
-            //check if file exists.
-            if (CheckFileExists(filename) == true) {
-                //load the main assembly as bytes.
-                byte[] dataFile = System.IO.File.ReadAllBytes(filename);
+            //load the main assembly as bytes.
+            byte[] dataFile = System.IO.File.ReadAllBytes(filename);
 
-                //load the dnlib assembly so it can patch things.
-                Assembly assembly = Assembly.LoadFrom(dnlib);
+            //load the dnlib assembly so it can patch things.
+            Assembly assembly = Assembly.LoadFrom(dnlib);
 
-                //Grab the dnlib.DotNet.ModuleDefMD type.
-                Type moduleDefinitionType = assembly.GetType("dnlib.DotNet.ModuleDefMD");
-                Type ModuleCreationOptionsType = assembly.GetType("dnlib.DotNet.ModuleCreationOptions");
+            //Grab the dnlib.DotNet.ModuleDefMD type.
+            Type moduleDefinitionType = assembly.GetType("dnlib.DotNet.ModuleDefMD");
+            Type ModuleCreationOptionsType = assembly.GetType("dnlib.DotNet.ModuleCreationOptions");
 
-                //Get the dnlib.DotNet.ModuleDefMD.Load(byte[], ModuleCreationOptions) method.
-                Type[] argumentTypes = { typeof(byte[]), ModuleCreationOptionsType };
-                MethodInfo methodInfo = moduleDefinitionType.GetMethod("Load", argumentTypes);
+            //Get the dnlib.DotNet.ModuleDefMD.Load(byte[], ModuleCreationOptions) method.
+            Type[] argumentTypes = { typeof(byte[]), ModuleCreationOptionsType };
+            MethodInfo methodInfo = moduleDefinitionType.GetMethod("Load", argumentTypes);
 
-                //Call the dnlib.DotNet.ModuleDefMD.Load(byte[], ModuleCreationOptions) method. Note: it is static, first argument is null as a result.
-                Object[] arguments = { dataFile, null };
-                dynamic module = methodInfo.Invoke(null, arguments);
+            //Call the dnlib.DotNet.ModuleDefMD.Load(byte[], ModuleCreationOptions) method. Note: it is static, first argument is null as a result.
+            Object[] arguments = { dataFile, null };
+            dynamic module = methodInfo.Invoke(null, arguments);
 
-                //Loop through each class.
-                dynamic classAttributeType = assembly.GetType("dnlib.DotNet.TypeAttributes");
-                foreach (dynamic type in module.GetTypes()) {
-                    //Make each class public.
-                    if (type.IsClass == true) {
-                        //Check if the class is a delegate. If it is NOT, then change its attributes.
-                        if (IsDelegate(type) == false) {
-                            //Check if the class is nested, then assign the appropriate public attributes.
-                            if (type.IsNested == true) {
-                                // Nested class: mark as NestedPublic.
-                                type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPublic"), classAttributeType);
-                                type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPrivate"), classAttributeType);
-                            }
-                            else {
-                                // Top level class: mark as Public.
-                                type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "Public"), classAttributeType);
-                                type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NotPublic"), classAttributeType);
-                            }
-
-                            // Check if the class is abstract. If it is NOT, then unseal it.
-                            if(type.IsAbstract == false) {
-                                type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "Sealed"), classAttributeType);
-                            }
+            //Loop through each class.
+            dynamic classAttributeType = assembly.GetType("dnlib.DotNet.TypeAttributes");
+            foreach (dynamic type in module.GetTypes()) {
+                //Make each class public.
+                if (type.IsClass == true) {
+                    //Check if the class is a delegate. If it is NOT, then change its attributes.
+                    if (IsDelegate(type) == false) {
+                        //Check if the class is nested, then assign the appropriate public attributes.
+                        if (type.IsNested == true) {
+                            // Nested class: mark as NestedPublic.
+                            type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPublic"), classAttributeType);
+                            //type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPrivate"), classAttributeType);
+                        }
+                        else {
+                            // Top level class: mark as Public.
+                            type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "Public"), classAttributeType);
+                            type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NotPublic"), classAttributeType);
                         }
 
-                        //Loop through each field.
-                        dynamic fieldAttributeType = assembly.GetType("dnlib.DotNet.FieldAttributes");
-                        foreach (dynamic field in type.Fields) {
-                            //Make each field public.
-                            field.Attributes |= Convert.ChangeType(Enum.Parse(fieldAttributeType, "Public"), fieldAttributeType);
-                            field.Attributes &= ~Convert.ChangeType(Enum.Parse(fieldAttributeType, "Private"), fieldAttributeType);
+                        // Check if the class is abstract. If it is NOT, then unseal it.
+                        if(type.IsAbstract == false) {
+                            type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "Sealed"), classAttributeType);
                         }
+                    }
 
-                        //Loop through each method.
-                        dynamic methodAttributeType = assembly.GetType("dnlib.DotNet.MethodAttributes");
-                        foreach (dynamic method in type.Methods) {
-                            //Make each method public.
-                            method.Attributes |= Convert.ChangeType(Enum.Parse(methodAttributeType, "Public"), methodAttributeType);
-                            method.Attributes &= ~Convert.ChangeType(Enum.Parse(methodAttributeType, "Private"), methodAttributeType);
+                    //Loop through each field.
+                    dynamic fieldAttributeType = assembly.GetType("dnlib.DotNet.FieldAttributes");
+                    foreach (dynamic field in type.Fields) {
+                        //Make each field public.
+                        field.Attributes |= Convert.ChangeType(Enum.Parse(fieldAttributeType, "Public"), fieldAttributeType);
+                        field.Attributes &= ~Convert.ChangeType(Enum.Parse(fieldAttributeType, "Private"), fieldAttributeType);
+                    }
 
-                            //Make each method virtual if it isn't static/constructor/abstract
-                            if(method.IsStatic == false  && method.IsAbstract == false && method.IsConstructor == false) {
-                                //make each method virtual.
-                                method.Attributes |= Convert.ChangeType(Enum.Parse(methodAttributeType, "Virtual"), methodAttributeType);
-                            }
+                    //Loop through each method.
+                    dynamic methodAttributeType = assembly.GetType("dnlib.DotNet.MethodAttributes");
+                    foreach (dynamic method in type.Methods) {
+                        //Make each method public.
+                        method.Attributes |= Convert.ChangeType(Enum.Parse(methodAttributeType, "Public"), methodAttributeType);
+                        method.Attributes &= ~Convert.ChangeType(Enum.Parse(methodAttributeType, "Private"), methodAttributeType);
+
+                        //Make each method virtual if it isn't static/constructor/abstract
+                        if(method.IsStatic == false  && method.IsAbstract == false && method.IsConstructor == false) {
+                            //make each method virtual.
+                            method.Attributes |= Convert.ChangeType(Enum.Parse(methodAttributeType, "Virtual"), methodAttributeType);
                         }
                     }
                 }
-
-                //Write out the module.
-                module.Write(filename);
-
-                return 0;
             }
+
+            //Write out the module.
+            module.Write(filename);
+
+            return 0;
         }
         catch (Exception e)
         {
@@ -197,18 +191,17 @@ class Program
             outBuffer.Append(e.ToString());
             return -1;
         }
-
-        return -1;
     }
 
-    static int Main(string[] args)
+    static int MergeAndPatch(String origFile, String modFile)
     {
-        string origFile = "de4dot.exe";
-        string modFile = "de4dotp.exe";
-        //return value
-        int returnValue;
+        //check if file exists.
+        if (!File.Exists(origFile)) {
+            return 0;
+        }
 
         //Merge de4dot with all of the assemblies it depends on into an assembly called de4dotp.exe.
+        int returnValue;
         PrintSeparater();
         Console.WriteLine("Merging '"+ origFile +"' and DLLs into a packed executable '"+ modFile +"'...\r\n");
         String ilmergeProgram = "ILRepack.exe";
@@ -233,14 +226,23 @@ class Program
         //print success
         PrintSeparater();
         if (returnValue == 0)
-            Console.WriteLine("de4dotp.exe packed and patched successfully!\r\n");
+            Console.WriteLine(origFile + " packed and patched successfully!\r\n");
 
         //remove a generated pdb from ilmerge if it exists.
-        File.Delete("de4dotp.pdb");
-        File.Delete("de4dotp.exe.config");
+        File.Delete(modFile.Split('.')[0]+".pdb");
+        File.Delete(modFile+".config");
+        return returnValue;
+    }
+
+    static int Main(string[] args)
+    {
+        int ret = MergeAndPatch("de4dot.exe", "de4dotp.exe");
+        if (ret == 0) { //if the x86 version was merged successfully (or doesn't exist), then merge the x64 version.
+            ret = MergeAndPatch("de4dot-x64.exe", "de4dotp-x64.exe");
+        }
 
         Console.WriteLine("Press Enter to exit...");
         Console.ReadLine();
-        return returnValue;
+        return ret;
     }
 }
