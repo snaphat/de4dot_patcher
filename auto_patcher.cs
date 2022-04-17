@@ -24,18 +24,6 @@ class Program
     }
 
     /// <summary>
-    /// Gets the program files (x86) directory on all windows versions.
-    /// </summary>
-    /// <returns>returns the program files directory</returns>
-    static string GetProgramFilesx86()
-    {
-        if (8 == IntPtr.Size
-            || (!String.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432"))))
-            return Environment.GetEnvironmentVariable("ProgramFiles(x86)");
-        return Environment.GetEnvironmentVariable("ProgramFiles");
-    }
-
-    /// <summary>
     /// Checks if a file exists.
     /// </summary>
     /// <param name="filename">The file to check existence for.</param>
