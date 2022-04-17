@@ -6,7 +6,7 @@ using System.Text;
 
 class Program
 {
-    static StringBuilder errorBuffer = new StringBuilder();
+    static StringBuilder outBuffer = new StringBuilder();
 
     public static bool IsDelegate(dynamic typeDefinition)
     {
@@ -38,7 +38,7 @@ class Program
                     return true; //success (in path)
 
             //write error.
-            errorBuffer.Append("Program '" + filename + "' does not exist.");
+            outBuffer.Append("Program '" + filename + "' does not exist.");
             return false;
         }
         return true; //success
@@ -57,7 +57,7 @@ class Program
             //check if file exists.
             if (CheckFileExists(filename) == true) {
                 //print out what we are doing.
-                errorBuffer.Append("Running program '" + filename + " " + arguments + "'...\r\n");
+                outBuffer.Append("Running program '" + filename + " " + arguments + "'...\r\n");
 
                 //create a new process instance.
                 Process process = new Process();
@@ -85,10 +85,10 @@ class Program
 
                 //print the processes messages.
                 if (output.Length > 0)
-                    errorBuffer.Append(output);
+                    outBuffer.Append(output);
 
                 if (error.Length > 0)
-                    errorBuffer.Append(error);
+                    outBuffer.Append(error);
 
                 //return the processes exit code.
                 return process.ExitCode;
@@ -101,7 +101,7 @@ class Program
         catch (Exception e)
         {
             //some sort of exception occurred.
-            errorBuffer.Append(e.ToString());
+            outBuffer.Append(e.ToString());
             return -1;
         }
     }
@@ -111,24 +111,17 @@ class Program
     /// </summary>
     /// <param name="filename">The assembly to patch.</param>
     /// <param name="dnlib">The dnlib assembly.</param>
-    /// <param name="bBackup">Whether to backup the file or not before patching.</param>
     /// <returns>Returns zero on success and -1 if some failure occurs.</returns>
-    public static int DoPatch(String filename, String dnlib, bool bBackup)
+    public static int DoPatch(String filename, String dnlib)
     {
         try
         {
             //check if file exists.
             if (CheckFileExists(filename) == true) {
-                //check whether to backup file
-                if (bBackup == true) {
-                    //Moving file
-                    String backupFile = filename + ".bak";
-                    File.Copy(filename, backupFile);
-                }
-
+                //load the main assembly as bytes.
                 byte[] dataFile = System.IO.File.ReadAllBytes(filename);
 
-                //load the dnlib assembly.
+                //load the dnlib assembly so it can patch things.
                 Assembly assembly = Assembly.LoadFrom(dnlib);
 
                 //Grab the dnlib.DotNet.ModuleDefMD type.
@@ -145,23 +138,24 @@ class Program
 
                 //Loop through each class.
                 dynamic classAttributeType = assembly.GetType("dnlib.DotNet.TypeAttributes");
-                foreach (dynamic type in module.GetTypes())
-                {
+                foreach (dynamic type in module.GetTypes()) {
                     //Make each class public.
                     if (type.IsClass == true) {
-                        //Check if the class is a delegate. If it is, then don't change its attributes.
+                        //Check if the class is a delegate. If it is NOT, then change its attributes.
                         if (IsDelegate(type) == false) {
-                            //check whether class is nested then assign the appropriate public.
+                            //Check if the class is nested, then assign the appropriate public attributes.
                             if (type.IsNested == true) {
+                                // Nested class: mark as NestedPublic.
                                 type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPublic"), classAttributeType);
-                                //type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPrivate"), classAttributeType);
+                                type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NestedPrivate"), classAttributeType);
                             }
                             else {
+                                // Top level class: mark as Public.
                                 type.Attributes |= Convert.ChangeType(Enum.Parse(classAttributeType, "Public"), classAttributeType);
                                 type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "NotPublic"), classAttributeType);
                             }
 
-                            //unseal the class.
+                            // Check if the class is abstract. If it is NOT, then unseal it.
                             if(type.IsAbstract == false) {
                                 type.Attributes &= ~Convert.ChangeType(Enum.Parse(classAttributeType, "Sealed"), classAttributeType);
                             }
@@ -200,7 +194,7 @@ class Program
         catch (Exception e)
         {
             //some sort of exception occurred.
-            errorBuffer.Append(e.ToString());
+            outBuffer.Append(e.ToString());
             return -1;
         }
 
@@ -214,34 +208,30 @@ class Program
         //return value
         int returnValue;
 
-        PrintSeparater(); //separater
-
         //Merge de4dot with all of the assemblies it depends on into an assembly called de4dotp.exe.
+        PrintSeparater();
         Console.WriteLine("Merging '"+ origFile +"' and DLLs into a packed executable '"+ modFile +"'...\r\n");
         String ilmergeProgram = "ILRepack.exe";
         String arguments = ".\\"+origFile + " AssemblyData.dll AssemblyServer.exe de4dot.blocks.dll de4dot.code.dll de4dot.cui.dll de4dot.mdecrypt.dll dnlib.dll /out:" + modFile;
         returnValue = RunProgram(ilmergeProgram, arguments);
 
         if (returnValue == 0) {
-            //clear the error buffer since it adds any output messages.
-            errorBuffer.Clear();
-            PrintSeparater(); //separater
+            outBuffer.Clear(); //clear the buffer since it adds any output messages.
+            PrintSeparater();
 
             //Patch de4dotp.exe to allow public access to all classes, fields, and methods and virtualizing methods.
             Console.WriteLine("Patching '"+ modFile +"', (1) Publicizing classes/fields/methods, (2) unsealing classes, (3) virtualizing methods...\r\n");
-            returnValue = DoPatch(".\\"+modFile, "dnlib.dll", false);
+            returnValue = DoPatch(".\\"+modFile, "dnlib.dll");
         }
 
         //print error message
         if (returnValue != 0) {
             Console.WriteLine("An error occurred:");
-            Console.WriteLine(errorBuffer);
+            Console.WriteLine(outBuffer);
         }
 
-        //separater
-        PrintSeparater();
-
         //print success
+        PrintSeparater();
         if (returnValue == 0)
             Console.WriteLine("de4dotp.exe packed and patched successfully!\r\n");
 
