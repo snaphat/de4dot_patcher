@@ -4,7 +4,7 @@ Patcher for d4dot that merges all assemblies into the base executable, publicize
 # Dependencies
 - `csc.exe` must be in your path. 
 - `ILRepack.exe` must be in your path.
-- `de4dot.exe` and associated dlls are needed for patching.
+- `de4dot.exe` or `de4dot-x64.exe`, and associated dlls are needed for patching.
 
 # Setup
 - Download a compiled version of [de4dot](https://github.com/mobile46/de4dot). You should be able to get a copy from the build bot [here](https://github.com/mobile46/de4dot/actions) as an artifact.
@@ -14,6 +14,6 @@ Patcher for d4dot that merges all assemblies into the base executable, publicize
 # Usage
 
 - Run `make.bat` to compile.
-- Drop `auto_patcher.exe` the same directory as de4dot.exe and run the executable.
-- A patched version of `de4dot.exe` called `de4dotp.exe` will be in the same directory.
-- `de4dotp.exe` is usable without any external dependencies and can be utilized directly as an assembly with other .net code.
+- Drop `auto_patcher.exe` the same directory as de4dot and run the executable.
+- Patched versions of de4dot called `de4dotp.exe` and `de4dotp-x64.exe` will be in the same directory.
+- `de4dotp.exe` and `de4dotp-x64.exe` are usable without any external dependencies and can be utilized directly as an assembly with other .net code.
