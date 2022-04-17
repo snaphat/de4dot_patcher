@@ -13,7 +13,7 @@ Patcher for d4dot that merges all assemblies into the base executable, publicize
 
 # Usage
 
-- Run `build.bat` to compile.
+- Run `make.bat` to compile.
 - Drop `auto_patcher.exe` the same directory as de4dot.exe and run the executable.
 - A patched version of `de4dot.exe` called `de4dotp.exe` will be in the same directory.
 - `de4dotp.exe` is usable without any external dependencies and can be utilized directly as an assembly with other .net code.
