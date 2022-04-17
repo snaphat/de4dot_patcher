@@ -11,9 +11,7 @@ class Program
     public static bool IsDelegate(dynamic typeDefinition)
     {
         if (typeDefinition.BaseType == null)
-        {
             return false;
-        }
         return typeDefinition.BaseType.FullName == "System.MulticastDelegate";
     }
 
@@ -36,7 +34,6 @@ class Program
         {
             return Environment.GetEnvironmentVariable("ProgramFiles(x86)");
         }
-
         return Environment.GetEnvironmentVariable("ProgramFiles");
     }
 
@@ -56,23 +53,14 @@ class Program
             {
                 var fullPath = Path.Combine(path, filename);
                 if (File.Exists(fullPath))
-                {
-                    // Success (in path)
-                    return true;
-                }
+                    return true; //success (in path)
             }
 
             //write error.
             errorBuffer.Append("Program '" + filename + "' does not exist.");
-
-            //failure
             return false;
         }
-        else
-        {
-            //success
-            return true;
-        }
+        return true; //success
     }
 
     /// <summary>
@@ -86,8 +74,7 @@ class Program
         try
         {
             //check if file exists.
-            if (CheckFileExists(filename) == true)
-            {
+            if (CheckFileExists(filename) == true) {
                 //print out what we are doing.
                 errorBuffer.Append("Running program '" + filename + " " + arguments + "'...\r\n");
 
@@ -117,14 +104,10 @@ class Program
 
                 //print the processes messages.
                 if (output.Length > 0)
-                {
                     errorBuffer.Append(output);
-                }
 
                 if (error.Length > 0)
-                {
                     errorBuffer.Append(error);
-                }
 
                 //return the processes exit code.
                 return process.ExitCode;
@@ -260,8 +243,7 @@ class Program
         //return value
         int returnValue;
 
-        //separater
-        PrintSeparater();
+        PrintSeparater(); //separater
 
         //Merge de4dot with all of the assemblies it depends on into an assembly called de4dotp.exe.
         Console.WriteLine("Merging '"+ origFile +"' and DLLs into a packed executable '"+ modFile +"'...\r\n");
@@ -273,9 +255,7 @@ class Program
         {
             //clear the error buffer since it adds any output messages.
             errorBuffer.Clear();
-
-            //separater
-            PrintSeparater();
+            PrintSeparater(); //separater
 
             //Patch de4dotp.exe to allow public access to all classes, fields, and methods and virtualizing methods.
             Console.WriteLine("Patching '"+ modFile +"', (1) Publicizing classes/fields/methods, (2) unsealing classes, (3) virtualizing methods...\r\n");
@@ -294,9 +274,7 @@ class Program
 
         //print success
         if (returnValue == 0)
-        {
             Console.WriteLine("de4dotp.exe packed and patched successfully!\r\n");
-        }
 
         //remove a generated pdb from ilmerge if it exists.
         File.Delete("de4dotp.pdb");
